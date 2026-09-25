@@ -8,27 +8,28 @@
 #include "frames.h"
 
 // ============================================================
-// Hardware
+// V1 - teste de hardware
+// NodeMCU ESP8266 + ST7789 1.54" 240x240 + DFPlayer Mini
 // ============================================================
-// ST7789 1.54" 240x240
+
+// ST7789
 #define TFT_CS   D8   // GPIO15
 #define TFT_DC   D2   // GPIO4
 #define TFT_RST  D0   // GPIO16
-
-// SPI por hardware no ESP8266:
+// SPI por hardware:
 // SCL/SCK = D5 / GPIO14
 // SDA/MOSI = D7 / GPIO13
 
 // DFPlayer Mini
 // SoftwareSerial(rxPin, txPin)
 #define DFPLAYER_RX D6  // recebe do TX do DFPlayer
-#define DFPLAYER_TX D1  // envia ao RX do DFPlayer (usar 1 kOhm em série)
+#define DFPLAYER_TX D1  // envia ao RX do DFPlayer; resistor de 1 kOhm recomendado
 
 // ============================================================
-// Configurações
+// Configuracoes
 // ============================================================
 const uint8_t DFPLAYER_VOLUME = 20;       // 0..30
-const uint16_t TRACK_COUNT = 3;           // /mp3/0001.mp3 ... /mp3/0003.mp3
+const uint16_t TRACK_COUNT = 2;           // /mp3/0001.mp3 e /mp3/0002.mp3
 const uint16_t FRAME_INTERVAL_MS = 120;   // ~8 FPS
 
 const uint8_t FRAME_SCALE = 8;            // 16x16 -> 128x128 pixels
@@ -48,7 +49,7 @@ unsigned long lastFrameAt = 0;
 bool dfPlayerReady = false;
 
 // ============================================================
-// Utilidades de tela
+// Tela
 // ============================================================
 void drawBitmapScaled(
   int16_t x,
@@ -88,8 +89,8 @@ void drawHeader() {
 
   tft.setTextColor(ST77XX_CYAN);
   tft.setTextSize(2);
-  tft.setCursor(24, 8);
-  tft.print(F("Mini Media Player"));
+  tft.setCursor(30, 8);
+  tft.print(F("Media Player V1"));
 
   tft.drawFastHLine(10, 28, 220, ST77XX_BLUE);
 }
@@ -113,10 +114,10 @@ void drawError(const __FlashStringHelper *line1, const __FlashStringHelper *line
   tft.setTextWrap(true);
   tft.setTextColor(ST77XX_RED);
   tft.setTextSize(2);
-  tft.setCursor(10, 60);
+  tft.setCursor(10, 50);
   tft.println(line1);
   tft.setTextColor(ST77XX_WHITE);
-  tft.setCursor(10, 105);
+  tft.setCursor(10, 100);
   tft.println(line2);
 }
 
@@ -146,24 +147,24 @@ void updateAnimation() {
 }
 
 // ============================================================
-// Áudio
+// Audio
 // ============================================================
 void playTrack(uint16_t track) {
   if (!dfPlayerReady) {
     return;
   }
 
-  if (track < 1) {
-    track = 1;
-  }
-  if (track > TRACK_COUNT) {
+  if (track < 1 || track > TRACK_COUNT) {
     track = 1;
   }
 
   currentTrack = track;
   drawTrackInfo();
 
-  // Requer arquivos no formato /mp3/0001.mp3, /mp3/0002.mp3, ...
+  Serial.print(F("Tocando faixa: "));
+  Serial.println(currentTrack);
+
+  // Cartao: /mp3/0001.mp3 e /mp3/0002.mp3
   dfPlayer.playMp3Folder(currentTrack);
 }
 
@@ -172,7 +173,6 @@ void playNextTrack() {
   if (nextTrack > TRACK_COUNT) {
     nextTrack = 1;
   }
-
   playTrack(nextTrack);
 }
 
@@ -200,33 +200,33 @@ void handleDfPlayerEvents() {
 // ============================================================
 void setup() {
   Serial.begin(115200);
-  delay(200);
-  Serial.println();
-  Serial.println(F("Iniciando Mini Media Player..."));
+  delay(300);
 
-  // O construtor da Adafruit_ST7789 usa o SPI por hardware.
-  // No NodeMCU ESP8266: SCK=D5 e MOSI=D7.
+  Serial.println();
+  Serial.println(F("=== Media Player V1 ==="));
+  Serial.println(F("Inicializando ST7789..."));
+
   tft.init(240, 240);
   tft.setRotation(0);
   drawHeader();
 
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
-  tft.setCursor(32, 100);
+  tft.setCursor(25, 100);
   tft.print(F("Iniciando audio..."));
 
+  Serial.println(F("Inicializando DFPlayer..."));
   dfSerial.begin(9600);
-  delay(1000);
+  delay(1200);
 
   if (!dfPlayer.begin(dfSerial, true, true)) {
-    Serial.println(F("Falha ao iniciar DFPlayer."));
-    Serial.println(F("Verifique alimentacao, RX/TX e microSD."));
+    Serial.println(F("ERRO: DFPlayer nao iniciou."));
+    Serial.println(F("Confira 5V, GND, RX/TX, resistor e microSD."));
 
     drawError(
       F("DFPlayer nao iniciou"),
-      F("Verifique SD, fios RX/TX e alimentacao 5V.")
+      F("Confira SD, RX/TX e alimentacao 5V.")
     );
-
     return;
   }
 
@@ -234,14 +234,12 @@ void setup() {
   dfPlayer.volume(DFPLAYER_VOLUME);
   dfPlayer.EQ(DFPLAYER_EQ_NORMAL);
   dfPlayer.outputDevice(DFPLAYER_DEVICE_SD);
-
   delay(500);
 
   drawHeader();
-  drawTrackInfo();
   playTrack(1);
 
-  Serial.println(F("Player pronto."));
+  Serial.println(F("Player pronto. Deve alternar 0001.mp3 e 0002.mp3."));
 }
 
 void loop() {
