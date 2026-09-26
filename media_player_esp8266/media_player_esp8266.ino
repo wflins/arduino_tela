@@ -259,9 +259,12 @@ void setup() {
 
   Serial.println(F("Inicializando DFPlayer..."));
   dfSerial.begin(9600);
-  delay(1200);
+  delay(1500);
 
-  if (!dfPlayer.begin(dfSerial, true, true)) {
+  // Alguns DFPlayer/clones respondem aos comandos normalmente, mas falham
+  // quando a biblioteca exige ACK e envia RESET durante o begin().
+  // Neste hardware, a inicializacao confiavel e sem ACK e sem RESET.
+  if (!dfPlayer.begin(dfSerial, false, false)) {
     Serial.println(F("ERRO: DFPlayer nao iniciou."));
     Serial.println(F("Confira 5V, GND, RX/TX, resistor e microSD."));
 
@@ -273,6 +276,8 @@ void setup() {
   }
 
   dfPlayerReady = true;
+  Serial.println(F("DFPlayer iniciado!"));
+
   dfPlayer.volume(DFPLAYER_VOLUME);
   dfPlayer.EQ(DFPLAYER_EQ_NORMAL);
   dfPlayer.outputDevice(DFPLAYER_DEVICE_SD);
