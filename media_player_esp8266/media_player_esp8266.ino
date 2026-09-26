@@ -51,16 +51,36 @@ const uint8_t* const FRAMES[FRAME_COUNT] = {
 };
 
 // ============================================================
-// Hardware
+// Hardware / pinagem
 // ============================================================
+//
+// ST7789        NodeMCU ESP8266
+// --------------------------------
+// VCC        -> 3V3
+// GND        -> GND
+// SCL / SCK  -> D5 / GPIO14
+// SDA / MOSI -> D7 / GPIO13
+// RES / RST  -> D0 / GPIO16
+// DC         -> D2 / GPIO4
+// CS         -> D8 / GPIO15
+// BLK / LED  -> 3V3
+//
+// DFPlayer Mini
+// --------------------------------
+// TX         -> D6 / GPIO12  (RX do SoftwareSerial)
+// RX         <- D1 / GPIO5   (TX do SoftwareSerial)
+// VCC        -> 5V
+// GND        -> GND comum
+//
+// D1 e D6 ficam exclusivos para o DFPlayer.
+// D0, D2, D5, D7 e D8 ficam exclusivos para a ST7789.
 
 // ST7789
 #define TFT_CS   D8   // GPIO15
 #define TFT_DC   D2   // GPIO4
 #define TFT_RST  D0   // GPIO16
-// SPI por hardware:
-// SCL/SCK = D5 / GPIO14
-// SDA/MOSI = D7 / GPIO13
+#define TFT_SCK  D5   // GPIO14 - SPI hardware
+#define TFT_MOSI D7   // GPIO13 - SPI hardware
 
 // DFPlayer Mini
 // SoftwareSerial(rxPin, txPin)
@@ -246,7 +266,14 @@ void setup() {
 
   Serial.println();
   Serial.println(F("=== Media Player V1 ==="));
+  Serial.println(F("Pinagem ativa:"));
+  Serial.println(F("  ST7789 SCK=D5 MOSI=D7 RST=D0 DC=D2 CS=D8"));
+  Serial.println(F("  DFPlayer RX=D6 TX=D1"));
   Serial.println(F("Inicializando ST7789..."));
+
+  // SPI de hardware do ESP8266: SCK=D5 e MOSI=D7.
+  // Mantem D1 e D6 livres exclusivamente para o DFPlayer.
+  SPI.begin();
 
   tft.init(240, 240);
   tft.setRotation(0);
